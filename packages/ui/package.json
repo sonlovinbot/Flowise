@@ -19,6 +19,8 @@
         "flowise-embed": "*",
         "flowise-embed-react": "*",
         "flowise-react-json-view": "*",
+        "lovinbot-embed": "*",
+        "lovinbot-embed-react": "*",
         "formik": "^2.2.6",
         "framer-motion": "^4.1.13",
         "history": "^5.0.0",
