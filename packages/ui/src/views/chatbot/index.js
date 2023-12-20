@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { FullPageChat } from 'flowise-embed-react'
+// import { FullPageChat } from 'flowise-embed-react'
 import { useNavigate } from 'react-router-dom'
-
+import { FullPageChat } from 'lovinbot-embed-react'
 // Project import
 import LoginDialog from 'ui-component/dialog/LoginDialog'
 
