@@ -1077,8 +1077,8 @@ export class App {
                 }
                 templates.push(template)
             })
-            const FlowiseDocsQnA = templates.find((tmp) => tmp.name === 'Flowise Docs QnA')
-            const FlowiseDocsQnAIndex = templates.findIndex((tmp) => tmp.name === 'Flowise Docs QnA')
+            const FlowiseDocsQnA = templates.find((tmp) => tmp.name === 'LovinBot Docs QnA')
+            const FlowiseDocsQnAIndex = templates.findIndex((tmp) => tmp.name === 'LovinBot Docs QnA')
             if (FlowiseDocsQnA && FlowiseDocsQnAIndex > 0) {
                 templates.splice(FlowiseDocsQnAIndex, 1)
                 templates.unshift(FlowiseDocsQnA)
