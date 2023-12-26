@@ -5,6 +5,8 @@ import { BaseLanguageModel } from 'langchain/base_language'
 import { flatten } from 'lodash'
 import { BaseChatMemory } from 'langchain/memory'
 import { ConsoleCallbackHandler, CustomChainHandler, additionalCallbacks } from '../../../src/handler'
+import { BasePromptTemplate } from 'langchain/prompts'
+import { SerializedConstructor } from 'langchain/dist/load/serializable'
 
 class OpenAIFunctionAgent_Agents implements INode {
     label: string
@@ -34,6 +36,11 @@ class OpenAIFunctionAgent_Agents implements INode {
                 list: true
             },
             {
+                label: 'Prompt',
+                name: 'prompt',
+                type: 'BasePromptTemplate'
+            },
+            {
                 label: 'Memory',
                 name: 'memory',
                 type: 'BaseChatMemory'
@@ -58,6 +65,11 @@ class OpenAIFunctionAgent_Agents implements INode {
         const model = nodeData.inputs?.model as BaseLanguageModel
         const memory = nodeData.inputs?.memory as BaseChatMemory
         const systemMessage = nodeData.inputs?.systemMessage as string
+        const prompt = nodeData.inputs?.prompt
+        console.log("🚀 ~ file: OpenAIFunctionAgent.ts:69 ~ OpenAIFunctionAgent_Agents ~ init ~ prompt:", prompt)
+        console.log("🚀 ~ systemMessagePrompt:", `\n${prompt.systemMessagePrompt}\n${prompt.humanMessagePrompt}`)
+
+        const agentPrompt = `\n${prompt.systemMessagePrompt}\n${prompt.humanMessagePrompt}`
 
         let tools = nodeData.inputs?.tools
         tools = flatten(tools)
@@ -66,7 +78,7 @@ class OpenAIFunctionAgent_Agents implements INode {
             agentType: 'openai-functions',
             verbose: process.env.DEBUG === 'true' ? true : false,
             agentArgs: {
-                prefix: systemMessage ?? `You are a helpful AI assistant.`
+                prefix: agentPrompt ?? `You are a helpful AI assistant.`
             }
         })
         if (memory) executor.memory = memory
@@ -92,6 +104,8 @@ class OpenAIFunctionAgent_Agents implements INode {
         const loggerHandler = new ConsoleCallbackHandler(options.logger)
         const callbacks = await additionalCallbacks(nodeData, options)
 
+        // Please check promptValues & inputVariables before using agentExecutor.run
+        // Ref: https://vscode.dev/github/sonlovinbot/Flowise/blob/temp/add-prompt-to-chat-prompt-template-node/packages/components/nodes/chains/LLMChain/LLMChain.ts#L175
         if (options.socketIO && options.socketIOClientId) {
             const handler = new CustomChainHandler(options.socketIO, options.socketIOClientId)
             const result = await executor.run(input, [loggerHandler, handler, ...callbacks])

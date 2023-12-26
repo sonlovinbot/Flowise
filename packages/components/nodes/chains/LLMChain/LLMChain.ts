@@ -80,7 +80,7 @@ class LLMChain_Chains implements INode {
 
     async init(nodeData: INodeData, input: string, options: ICommonObject): Promise<any> {
         const model = nodeData.inputs?.model as BaseLanguageModel
-        const prompt = nodeData.inputs?.prompt
+        const prompt = nodeData.inputs?.prompt.prompt
         const output = nodeData.outputs?.output as string
         const promptValues = prompt.promptValues as ICommonObject
         const llmOutputParser = nodeData.inputs?.outputParser as BaseOutputParser

@@ -69,7 +69,11 @@ class ChatPromptTemplate_Prompts implements INode {
         // @ts-ignore
         prompt.promptValues = promptValues
 
-        return prompt
+        return {
+            prompt,
+            systemMessagePrompt,
+            humanMessagePrompt
+        }
     }
 }
 
