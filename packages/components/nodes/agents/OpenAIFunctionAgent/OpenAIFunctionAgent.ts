@@ -1,7 +1,8 @@
 import { ICommonObject, INode, INodeData, INodeParams } from '../../../src/Interface'
 import { initializeAgentExecutorWithOptions, AgentExecutor } from 'langchain/agents'
-import { getBaseClasses, mapChatHistory } from '../../../src/utils'
+import { getBaseClasses, mapChatHistory, handleEscapeCharacters } from '../../../src/utils'
 import { BaseLanguageModel } from 'langchain/base_language'
+import { formatResponse } from '../../outputparsers/OutputParserHelpers'
 import { flatten } from 'lodash'
 import { BaseChatMemory } from 'langchain/memory'
 import { ConsoleCallbackHandler, CustomChainHandler, additionalCallbacks } from '../../../src/handler'
@@ -62,7 +63,7 @@ class OpenAIFunctionAgent_Agents implements INode {
     async init(nodeData: INodeData): Promise<any> {
         const model = nodeData.inputs?.model as BaseLanguageModel
         const memory = nodeData.inputs?.memory as BaseChatMemory
-        const systemMessage = nodeData.inputs?.systemMessage as string
+        // const systemMessage = nodeData.inputs?.systemMessage as string
         const prompt = nodeData.inputs?.prompt
         console.log('🚀 ~ file: OpenAIFunctionAgent.ts:69 ~ OpenAIFunctionAgent_Agents ~ init ~ prompt:', prompt)
         console.log('🚀 ~ systemMessagePrompt:', `\n${prompt.systemMessagePrompt}\n${prompt.humanMessagePrompt}`)
@@ -83,38 +84,6 @@ class OpenAIFunctionAgent_Agents implements INode {
 
         return executor
     }
-
-    // async run(nodeData: INodeData, input: string, options: ICommonObject): Promise<string> {
-    //     const executor = nodeData.instance as AgentExecutor
-    //     const inputVariables = nodeData.instance.prompt.inputVariables as string[]
-    //     console.log("agent inputVariables: ", inputVariables)
-    //     const memory = nodeData.inputs?.memory as BaseChatMemory
-
-    //     if (options && options.chatHistory) {
-    //         const chatHistoryClassName = memory.chatHistory.constructor.name
-    //         // Only replace when its In-Memory
-    //         if (chatHistoryClassName && chatHistoryClassName === 'ChatMessageHistory') {
-    //             memory.chatHistory = mapChatHistory(options)
-    //             executor.memory = memory
-    //         }
-    //     }
-
-    //     ;(executor.memory as any).returnMessages = true // Return true for BaseChatModel
-
-    //     const loggerHandler = new ConsoleCallbackHandler(options.logger)
-    //     const callbacks = await additionalCallbacks(nodeData, options)
-
-    //     // Please check promptValues & inputVariables before using agentExecutor.run
-    //     // Ref: https://vscode.dev/github/sonlovinbot/Flowise/blob/temp/add-prompt-to-chat-prompt-template-node/packages/components/nodes/chains/LLMChain/LLMChain.ts#L175
-    //     if (options.socketIO && options.socketIOClientId) {
-    //         const handler = new CustomChainHandler(options.socketIO, options.socketIOClientId)
-    //         const result = await executor.run(input, [loggerHandler, handler, ...callbacks])
-    //         return result
-    //     } else {
-    //         const result = await executor.run(input, [loggerHandler, ...callbacks])
-    //         return result
-    //     }
-    // }
     async run(nodeData: INodeData, input: string, options: ICommonObject): Promise<string | object> {
         const executor = nodeData.instance as AgentExecutor
         const memory = nodeData.inputs?.memory as BaseChatMemory
@@ -129,9 +98,6 @@ class OpenAIFunctionAgent_Agents implements INode {
         }
 
         ;(executor.memory as any).returnMessages = true // Return true for BaseChatModel
-
-        const loggerHandler = new ConsoleCallbackHandler(options.logger)
-        const callbacks = await additionalCallbacks(nodeData, options)
 
         const inputVariables = nodeData.instance.prompt.inputVariables as string[] // ["product"]
         const promptValues: ICommonObject | undefined = nodeData.inputs?.prompt.promptValues as ICommonObject
@@ -151,24 +117,67 @@ const runPrediction = async (
     options: ICommonObject,
     nodeData: INodeData,
     inputVariables: string[],
-    promptValues: ICommonObject | undefined
+    promptValuesRaw: ICommonObject | undefined
 ) => {
+    const loggerHandler = new ConsoleCallbackHandler(options.logger)
+    const callbacks = await additionalCallbacks(nodeData, options)
+    const isStreaming = options.socketIO && options.socketIOClientId
+    const socketIO = isStreaming ? options.socketIO : undefined
+    const socketIOClientId = isStreaming ? options.socketIOClientId : ''
+    const promptValues = handleEscapeCharacters(promptValuesRaw, true)
+
     // Logic to handle inputVariables and promptValues
-    if (inputVariables && promptValues) {
-        for (let i = 0; i < inputVariables.length; i++) {
-            if (promptValues[inputVariables[i]]) {
-                input = input.replace(new RegExp(`{{${inputVariables[i]}}}`, 'g'), promptValues[inputVariables[i]])
+    if (promptValues && inputVariables.length > 0) {
+        let seen: string[] = []
+
+        for (const variable of inputVariables) {
+            seen.push(variable)
+            if (promptValues[variable]) {
+                seen.pop()
             }
         }
-    }
 
-    if (options.socketIO && options.socketIOClientId) {
-        const handler = new CustomChainHandler(options.socketIO, options.socketIOClientId)
-        const result = await executor.run(input, [loggerHandler, handler, ...callbacks])
-        return result
+        if (seen.length === 0) {
+            // All inputVariables have fixed values specified
+            const options = { ...promptValues }
+            if (isStreaming) {
+                const handler = new CustomChainHandler(socketIO, socketIOClientId)
+                const res = await executor.call(options, [loggerHandler, handler, ...callbacks])
+                return formatResponse(res?.text)
+            } else {
+                const res = await executor.call(options, [loggerHandler, ...callbacks])
+                return formatResponse(res?.text)
+            }
+        } else if (seen.length === 1) {
+            // If one inputVariable is not specify, use input (user's question) as value
+            const lastValue = seen.pop()
+            if (!lastValue) throw new Error('Please provide Prompt Values')
+            const options = {
+                ...promptValues,
+                [lastValue]: input
+            }
+            if (isStreaming) {
+                const handler = new CustomChainHandler(socketIO, socketIOClientId)
+                const res = await executor.call(options, [loggerHandler, handler, ...callbacks])
+                console.log('Res: ', res)
+                return formatResponse(res?.text)
+            } else {
+                const res = await executor.call(options, [loggerHandler, ...callbacks])
+                console.log('Res: ', res)
+                return formatResponse(res?.text)
+            }
+        } else {
+            throw new Error(`Please provide Prompt Values for: ${seen.join(', ')}`)
+        }
     } else {
-        const result = await executor.run(input, [loggerHandler, ...callbacks])
-        return result
+        if (options.socketIO && options.socketIOClientId) {
+            const handler = new CustomChainHandler(options.socketIO, options.socketIOClientId)
+            const result = await executor.run(input, [loggerHandler, handler, ...callbacks])
+            return result
+        } else {
+            const result = await executor.run(input, [loggerHandler, ...callbacks])
+            return result
+        }
     }
 }
 
