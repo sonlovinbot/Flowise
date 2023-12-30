@@ -125,6 +125,8 @@ class LLMChain_Chains implements INode {
         const inputVariables = nodeData.instance.prompt.inputVariables as string[] // ["product"]
         const chain = nodeData.instance as LLMChain
         let promptValues: ICommonObject | undefined = nodeData.inputs?.prompt.promptValues as ICommonObject
+        console.log('LLMChain: inputVariables: ', inputVariables)
+        console.log('LLMChain: promptValues: ', promptValues)
         const outputParser = nodeData.inputs?.outputParser as BaseOutputParser
         if (!this.outputParser && outputParser) {
             this.outputParser = outputParser
@@ -160,6 +162,8 @@ const runPrediction = async (
      * TO: { "value": "hello i am ben\n\n\thow are you?" }
      */
     const promptValues = handleEscapeCharacters(promptValuesRaw, true)
+    console.log('LLMChain: promptValues of runPrediction: ', promptValues)
+    console.log('LLMChain: inputVariables of runPrediction: ', inputVariables)
 
     if (moderations && moderations.length > 0) {
         try {

@@ -65,8 +65,8 @@ class OpenAIFunctionAgent_Agents implements INode {
         const memory = nodeData.inputs?.memory as BaseChatMemory
         // const systemMessage = nodeData.inputs?.systemMessage as string
         const prompt = nodeData.inputs?.prompt
-        console.log('🚀 ~ file: OpenAIFunctionAgent.ts:69 ~ OpenAIFunctionAgent_Agents ~ init ~ prompt:', prompt)
-        console.log('🚀 ~ systemMessagePrompt:', `\n${prompt.systemMessagePrompt}\n${prompt.humanMessagePrompt}`)
+        console.log('OpenAIFunctionAgent: prompt:', prompt)
+        console.log('OpenAIFunctionAgent: systemMessagePrompt:', `\n${prompt.systemMessagePrompt}\n${prompt.humanMessagePrompt}`)
 
         const agentPrompt = `\n${prompt.systemMessagePrompt}\n${prompt.humanMessagePrompt}`
 
@@ -85,6 +85,8 @@ class OpenAIFunctionAgent_Agents implements INode {
         return executor
     }
     async run(nodeData: INodeData, input: string, options: ICommonObject): Promise<string | object> {
+        console.log('OpenAIFunctionAgent: Debug: nodeData instance', nodeData.instance)
+        console.log('OpenAIFunctionAgent: Debug: nodeData inputs', nodeData.inputs)
         const executor = nodeData.instance as AgentExecutor
         const memory = nodeData.inputs?.memory as BaseChatMemory
 
@@ -98,10 +100,12 @@ class OpenAIFunctionAgent_Agents implements INode {
         }
 
         ;(executor.memory as any).returnMessages = true // Return true for BaseChatModel
-
-        const inputVariables = nodeData.instance.prompt.inputVariables as string[] // ["product"]
-        const promptValues: ICommonObject | undefined = nodeData.inputs?.prompt.promptValues as ICommonObject
-
+        console.log('OpenAIFunctionAgent: Chuẩn bị check inputvariables + promptvalues')
+        const inputVariables = nodeData.inputs?.prompt?.prompt?.inputVariables as string[] // ["product"]
+        // const inputVariables = nodeData.instance.prompt.inputVariables as string[] // ["product"]
+        const promptValues: ICommonObject | undefined = nodeData.inputs?.prompt?.prompt?.promptValues as ICommonObject
+        console.log('OpenAIFunctionAgent: inputVariables: ', inputVariables)
+        console.log('OpenAIFunctionAgent: promptValues: ', promptValues)
         const res = await runPrediction(executor, input, options, nodeData, inputVariables, promptValues)
 
         // eslint-disable-next-line no-console
@@ -125,6 +129,9 @@ const runPrediction = async (
     const socketIO = isStreaming ? options.socketIO : undefined
     const socketIOClientId = isStreaming ? options.socketIOClientId : ''
     const promptValues = handleEscapeCharacters(promptValuesRaw, true)
+    // console.log('inputVariables: ', inputVariables)
+    console.log('OpenAIFunctionAgent: promptValues of runPrediction: ', promptValues)
+    console.log('OpenAIFunctionAgent: promptValuesRaw of runPrediction: ', promptValuesRaw)
 
     // Logic to handle inputVariables and promptValues
     if (promptValues && inputVariables.length > 0) {
@@ -143,10 +150,12 @@ const runPrediction = async (
             if (isStreaming) {
                 const handler = new CustomChainHandler(socketIO, socketIOClientId)
                 const res = await executor.call(options, [loggerHandler, handler, ...callbacks])
-                return formatResponse(res?.text)
+                // return formatResponse(res?.text)
+                return res
             } else {
                 const res = await executor.call(options, [loggerHandler, ...callbacks])
-                return formatResponse(res?.text)
+                // return formatResponse(res?.text)
+                return res
             }
         } else if (seen.length === 1) {
             // If one inputVariable is not specify, use input (user's question) as value
