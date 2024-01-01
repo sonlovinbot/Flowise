@@ -85,8 +85,8 @@ class OpenAIFunctionAgent_Agents implements INode {
         return executor
     }
     async run(nodeData: INodeData, input: string, options: ICommonObject): Promise<string | object> {
-        console.log('OpenAIFunctionAgent: Debug: nodeData instance', nodeData.instance)
-        console.log('OpenAIFunctionAgent: Debug: nodeData inputs', nodeData.inputs)
+        // console.log('OpenAIFunctionAgent: Debug: nodeData instance', nodeData.instance)
+        // console.log('OpenAIFunctionAgent: Debug: nodeData inputs', nodeData.inputs)
         const executor = nodeData.instance as AgentExecutor
         const memory = nodeData.inputs?.memory as BaseChatMemory
 
@@ -131,7 +131,7 @@ const runPrediction = async (
     const promptValues = handleEscapeCharacters(promptValuesRaw, true)
     // console.log('inputVariables: ', inputVariables)
     console.log('OpenAIFunctionAgent: promptValues of runPrediction: ', promptValues)
-    console.log('OpenAIFunctionAgent: promptValuesRaw of runPrediction: ', promptValuesRaw)
+    // console.log('OpenAIFunctionAgent: promptValuesRaw of runPrediction: ', promptValuesRaw)
 
     // Logic to handle inputVariables and promptValues
     if (promptValues && inputVariables.length > 0) {
@@ -168,11 +168,11 @@ const runPrediction = async (
             if (isStreaming) {
                 const handler = new CustomChainHandler(socketIO, socketIOClientId)
                 const res = await executor.call(options, [loggerHandler, handler, ...callbacks])
-                console.log('Res: ', res)
+                // console.log('Res: ', res)
                 return formatResponse(res?.text)
             } else {
                 const res = await executor.call(options, [loggerHandler, ...callbacks])
-                console.log('Res: ', res)
+                // console.log('Res: ', res)
                 return formatResponse(res?.text)
             }
         } else {
