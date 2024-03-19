@@ -11,7 +11,7 @@ import {
 import { MongoDBChatMessageHistory } from 'langchain/stores/message/mongodb'
 import { BufferMemory, BufferMemoryInput } from 'langchain/memory'
 import { BaseMessage, mapStoredMessageToChatMessage } from 'langchain/schema'
-import { MongoClient } from 'mongodb'
+import { MongoClient, PushOperator } from 'mongodb'
 
 class MongoDB_Memory implements INode {
     label: string
@@ -131,7 +131,7 @@ const initializeMongoDB = async (nodeData: INodeData, options: ICommonObject): P
         await collection.updateOne(
             { sessionId: (mongoDBChatMessageHistory as any).sessionId },
             {
-                $push: { messages: { $each: messages } }
+                $push: { messages: { $each: messages } } as PushOperator<Document>
             },
             { upsert: true }
         )
